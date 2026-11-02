@@ -40,18 +40,66 @@ example : min a b = min b a := by
     apply min_le_left
 
 example : max a b = max b a := by
-  sorry
+  have h: ∀ x y : ℝ, max x y ≤ max y x := by
+    intro x y
+    apply max_le
+    apply Std.right_le_max
+    apply Std.left_le_max
+  apply le_antisymm
+  apply h
+  apply h
+
 example : min (min a b) c = min a (min b c) := by
-  sorry
+  apply le_antisymm
+  . show min (min a b) c ≤ min a (min b c)
+    apply le_min
+    . apply le_trans
+      apply min_le_left
+      apply min_le_left
+    . apply le_min
+      . apply le_trans
+        apply min_le_left
+        apply min_le_right
+      . apply min_le_right
+  . apply le_min
+    . apply le_min
+      . apply min_le_left
+      . apply le_trans
+        apply min_le_right
+        apply min_le_left
+    . apply le_trans
+      apply min_le_right
+      apply min_le_right
+
 theorem aux : min a b + c ≤ min (a + c) (b + c) := by
-  sorry
+  apply le_min
+  . linarith [min_le_left a b]
+  linarith [min_le_right a b]
+
 example : min a b + c = min (a + c) (b + c) := by
-  sorry
+  apply le_antisymm
+  . apply aux
+  calc
+    min (a + c) (b + c) ≤ min (a + c + -c) (b + c + -c) + c := by
+      linarith [aux (a + c) (b + c) (-c)]
+    _ = min a b + c := by rw [add_neg_cancel_right, add_neg_cancel_right]
+
 #check (abs_add_le : ∀ a b : ℝ, |a + b| ≤ |a| + |b|)
 
 example : |a| - |b| ≤ |a - b| :=
-  sorry
+  have h : a + b - b = a - b + b := by ring
+  calc
+    |a| - |b| = |a + b - b| - |b| := by rw [add_sub_cancel_right a b]
+    _ = |a - b + b| - |b| := by rw [h]
+    _ ≤ |a - b| := by linarith [abs_add_le (a - b) b]
+
+example : |a| - |b| ≤ |a - b| :=
+  calc
+    |a| - |b| = |a - b + b| - |b| := by rw [sub_add_cancel a b]
+    _ ≤ |a - b| := by linarith [abs_add_le (a - b) b]
+
 end
+
 
 section
 variable (w x y z : ℕ)
@@ -67,7 +115,14 @@ example : x ∣ x ^ 2 := by
   apply dvd_mul_left
 
 example (h : x ∣ w) : x ∣ y * (x * z) + x ^ 2 + w ^ 2 := by
-  sorry
+  apply dvd_add
+  . apply dvd_add
+    . apply dvd_mul_of_dvd_right
+      apply dvd_mul_right
+    apply dvd_mul_left
+  apply dvd_mul_of_dvd_right
+  apply h
+
 end
 
 section
@@ -79,7 +134,5 @@ variable (m n : ℕ)
 #check (Nat.lcm_zero_left n : Nat.lcm 0 n = 0)
 
 example : Nat.gcd m n = Nat.gcd n m := by
-  sorry
+  apply gcd_comm m n
 end
-
-
