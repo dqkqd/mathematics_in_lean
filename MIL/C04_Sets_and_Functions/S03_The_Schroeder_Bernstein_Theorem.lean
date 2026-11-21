@@ -28,56 +28,114 @@ theorem sb_right_inv {x : α} (hx : x ∉ sbSet f g) : g (invFun g x) = x := by
     rw [sbSet, mem_iUnion]
     use 0
     rw [sbAux, mem_sdiff]
-    sorry
-  have : ∃ y, g y = x := by
-    sorry
-  sorry
+    use trivial
+  have : ∃ y, g y = x := exists_mem_univ.mp this
+  exact (invFun_eq  this)
+
+-- my full proof
+example (hf : Injective f) : Injective (sbFun f g) := by
+  -- we prove and aux that if x is in A, then the `g f` should also be in A
+  have hx: ∀ x ∈ sbSet f g, g (f x) ∈ sbSet f g := by
+    -- let x be in A
+    rintro x xinA
+    rw [sbSet, mem_iUnion] at *
+    -- there exists i such that x ∈ Aᵢ
+    rcases xinA with ⟨i, xAi⟩
+    -- because sbAux is defined as `S(n + 1) => g '' (f '' Sn)`,
+    -- so (g f x) is in S(i + 1)
+    use i + 1
+    simp [sbAux]
+    use x
+
+  rintro x1 x2
+  rw [sbFun, sbFun]
+  rintro eq
+
+  by_cases h1: x1 ∈ sbSet f g
+  . by_cases h2: x2 ∈ sbSet f g
+    . simp [h1, h2] at eq
+      exact hf eq
+    . simp [h1, h2] at eq
+      have h := hx x1 h1
+      rw [eq, sb_right_inv f g h2] at h
+      exact absurd h h2
+  by_cases h2: x2 ∈ sbSet f g
+  . simp [h1, h2] at eq
+    have h := hx x2 h2
+    rw [← eq, sb_right_inv f g h1] at h
+    exact absurd h h1
+  simp [h1, h2] at eq
+  rw [← sb_right_inv f g h1, ← sb_right_inv f g h2]
+  rw [eq]
 
 theorem sb_injective (hf : Injective f) : Injective (sbFun f g) := by
   set A := sbSet f g with A_def
   set h := sbFun f g with h_def
-  intro x₁ x₂ (hxeq : h x₁ = h x₂)
-  show x₁ = x₂
-  simp only [h_def, sbFun, ← A_def] at hxeq
-  by_cases xA : x₁ ∈ A ∨ x₂ ∈ A
-  · wlog x₁A : x₁ ∈ A generalizing x₁ x₂ hxeq xA
-    · symm
-      apply this hxeq.symm xA.symm (xA.resolve_left x₁A)
-    have x₂A : x₂ ∈ A := by
-      apply _root_.not_imp_self.mp
-      intro (x₂nA : x₂ ∉ A)
-      rw [ite_eq_left x₁A, ite_eq_right x₂nA] at hxeq
-      rw [A_def, sbSet, mem_iUnion] at x₁A
-      have x₂eq : x₂ = g (f x₁) := by
-        sorry
-      rcases x₁A with ⟨n, hn⟩
-      rw [A_def, sbSet, mem_iUnion]
-      use n + 1
+
+  rintro x1 x2 (eq: h x1 = h x2)
+  simp [h_def, sbFun] at eq
+  by_cases xA: x1 ∈ A ∨ x2 ∈ A
+  . wlog x1A: x1 ∈ A generalizing x1 x2 eq xA
+    . symm
+      apply this eq.symm xA.symm (xA.resolve_left x1A)
+    simp [A_def] at x1A
+    simp [x1A] at eq
+    have x2A: x2 ∈ A := by
+      by_contra x2a
+      simp [A_def] at x2a
+      simp [x2a] at eq
+      rw [← sb_right_inv f g x2a, ← eq] at x2a
+      apply x2a
+      rw [sbSet, mem_iUnion] at *
+      rcases x1A with ⟨i, xAi⟩
+      use i + 1
       simp [sbAux]
-      exact ⟨x₁, hn, x₂eq.symm⟩
-    sorry
+      use x1
+    simp [A_def] at x2A
+    simp [x2A] at eq
+    exact hf eq
   push Not at xA
-  sorry
+  simp [A_def] at xA
+  simp [xA] at eq
+  rw [← sb_right_inv f g xA.left, ← sb_right_inv f g xA.right]
+  rw [eq]
 
 theorem sb_surjective (hg : Injective g) : Surjective (sbFun f g) := by
-  set A := sbSet f g with A_def
-  set h := sbFun f g with h_def
   intro y
-  by_cases gyA : g y ∈ A
-  · rw [A_def, sbSet, mem_iUnion] at gyA
-    rcases gyA with ⟨n, hn⟩
-    rcases n with _ | n
-    · simp [sbAux] at hn
-    simp [sbAux] at hn
-    rcases hn with ⟨x, xmem, hx⟩
+  simp [sbFun]
+  let gy := g y
+  by_cases gyA: gy ∈ sbSet f g
+  .
+    -- we prove that there exists x such that g f x = gy
+    have : ∃ x ∈ sbSet f g, g (f x) = gy := by
+      simp [sbSet] at gyA
+      -- because gy ∈ A, there exists i such that g ∈ Aᵢ
+      rcases gyA with ⟨i, gAi⟩
+      -- there are two cases for i, zero and non zero
+      cases i with
+      | zero =>
+        -- if i is zero, then gy ∉ A, this is the contradiction
+        simp [sbAux] at gAi
+        have := gAi y
+        contradiction
+      | succ n =>
+        -- if i is not zero, there exists n such that i = n + 1
+        simp [sbAux] at gAi
+        -- there exists x in Sₙ such that (g f x) = gy
+        rcases gAi with ⟨x, ⟨xAi, _⟩⟩
+        have : x ∈ sbSet f g := by
+          rw [sbSet, mem_iUnion]
+          use n
+        use x
+    rcases this with ⟨x, ⟨xA, gfx⟩⟩
     use x
-    have : x ∈ A := by
-      rw [A_def, sbSet, mem_iUnion]
-      exact ⟨n, xmem⟩
-    rw [h_def, sbFun, ite_eq_left this]
-    apply hg hx
-
-  sorry
+    simp [xA]
+    -- because g is injective, we have f x = y
+    exact hg gfx
+  use gy
+  simp [gyA]
+  apply hg
+  rw [sb_right_inv f g gyA]
 
 end
 
